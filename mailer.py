@@ -4,7 +4,7 @@ import html, json, os, smtplib, ssl, threading, time, urllib.error, urllib.reque
 from email.message import EmailMessage
 
 if os.path.exists(".env"):  # KEY=value lines; keeps secrets out of the shell and chat
-    for _l in open(".env", encoding="utf-8"):
+    for _l in open(".env", encoding="utf-8-sig"):  # utf-8-sig: tolerate a BOM added by some editors
         _l = _l.strip()
         if _l and not _l.startswith("#") and "=" in _l:
             _k, _v = _l.split("=", 1)
