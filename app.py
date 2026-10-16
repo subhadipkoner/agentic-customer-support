@@ -1,10 +1,10 @@
 import asyncio, hashlib, hmac, html, json, os, re, secrets, threading, time
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import mailer, agent, emailcheck  # mailer first: it loads .env
 
-DB = "cases.json"
+DB = os.getenv("DB_PATH", "cases.json")
 STAFF_PIN = os.getenv("STAFF_PIN", "")  # empty = dashboard is open (set a PIN in .env to protect it)
 OTP_TTL, SESSION_TTL, RESEND_GAP, MAX_TRIES, MAX_PER_HOUR = 600, 86400, 30, 5, 5
 EMAIL_RX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -16,6 +16,27 @@ app = FastAPI(title="TechNest Autonomous Support Agent")
 
 def save():
     json.dump(cases, open(DB, "w"), indent=1)
+
+
+# ---------- abuse protection: per-IP and global rate limits ----------
+hits = {}  # (bucket, key) -> [timestamps]
+LIMITS = {"otp_send": (8, 3600), "otp_verify": (40, 3600), "create": (15, 3600), "otp_global": (80, 3600)}
+
+
+def client_ip(req: Request):
+    xff = req.headers.get("x-forwarded-for")  # set by the hosting proxy (Render)
+    return (xff.split(",")[0].strip() if xff else (req.client.host if req.client else "?"))
+
+
+def limit(bucket, key):
+    n, window = LIMITS[bucket]
+    now = time.time()
+    lst = [t for t in hits.get((bucket, key), []) if now - t < window]
+    if len(lst) >= n:
+        hits[(bucket, key)] = lst
+        raise HTTPException(429, "Too many requests. Please try again later.")
+    lst.append(now)
+    hits[(bucket, key)] = lst
 
 
 # ---------- auth ----------
@@ -77,8 +98,9 @@ def email_check(email: str = ""):
 
 
 @app.post("/api/otp/send")
-def otp_send(b: EmailIn):
+def otp_send(b: EmailIn, request: Request):
     email = b.email.strip().lower()
+    limit("otp_send", client_ip(request))
     ok, msg = emailcheck.check(email)
     if not ok:
         raise HTTPException(422, msg)
@@ -92,6 +114,7 @@ def otp_send(b: EmailIn):
         raise HTTPException(429, f"Please wait {int(RESEND_GAP - (now - st['sent'][-1])) + 1}s before requesting another code.")
     if len(st["sent"]) >= MAX_PER_HOUR:
         raise HTTPException(429, "Too many codes requested. Try again in an hour.")
+    limit("otp_global", "all")  # protects the email provider's daily quota
     code = f"{secrets.randbelow(10**6):06d}"
     try:  # synchronous: if the mail server rejects the address, tell the user right now
         mailer.deliver(email, f"{code} is your TechNest verification code",
@@ -108,8 +131,9 @@ def otp_send(b: EmailIn):
 
 
 @app.post("/api/otp/verify")
-def otp_verify(b: Verify):
+def otp_verify(b: Verify, request: Request):
     email = b.email.strip().lower()
+    limit("otp_verify", client_ip(request))
     st = otps.get(email)
     if not st or "h" not in st or st["exp"] < time.time():
         raise HTTPException(400, "Code expired. Please request a new one.")
@@ -176,8 +200,9 @@ class Rate(BaseModel):
 
 
 @app.post("/api/cases")
-def new(f: Form, x_token: str = Header(None)):
+def new(f: Form, request: Request, x_token: str = Header(None)):
     email = need_customer(x_token)
+    limit("create", client_ip(request))
     if f.email.strip().lower() != email:
         raise HTTPException(403, "The email must match your verified address.")
     with lock:
@@ -280,7 +305,7 @@ async def sla_loop():
 @app.on_event("startup")
 async def _start():
     asyncio.create_task(sla_loop())
-    print("[mail] " + (f"SMTP ready ({mailer.HOST}:{mailer.PORT}): real emails enabled" if mailer.CONFIGURED else
+    print("[mail] " + (f"{mailer.PROVIDER} ready: real emails enabled" if mailer.CONFIGURED else
           "DEV OTP (ALLOW_DEV_OTP=1): codes shown on screen, NOT emailed" if mailer.ALLOW_DEV_OTP else
           "SMTP NOT configured: verification codes cannot be sent. See .env.example"))
     print("[staff] dashboard " + ("protected by STAFF_PIN" if STAFF_PIN else "is OPEN (no PIN)"))

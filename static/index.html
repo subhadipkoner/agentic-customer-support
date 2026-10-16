@@ -141,6 +141,7 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--ac);box-sha
 </div>
 <div id="v2" class="hide"><div id="slogin" class="card hide" style="max-width:380px;margin:40px auto;text-align:center"><h3>Staff sign-in</h3><p style="color:var(--mu);margin-top:-6px">Enter the staff PIN to view the dashboard.</p><input id="pin" type="password" placeholder="Staff PIN" style="text-align:center" onkeydown="if(event.key=='Enter')staffLogin()"><button class="btn pri big" onclick="staffLogin()">Sign in</button></div>
 <div id="sdash"><div id="stats" class="sg"></div><input id="q" placeholder="Search by name, email or case id..." oninput="loadList()" style="margin-bottom:12px"><div class="filters" id="filters"></div><div id="list"></div></div></div>
+<div class="mini" style="justify-content:center;margin-top:34px;text-align:center">Portfolio demo project &middot; please don't enter sensitive personal data &middot; data may be reset at any time</div>
 </main>
 <script>
 let cur=null,timer=null,lastSig='',flt='all';const $=i=>document.getElementById(i);

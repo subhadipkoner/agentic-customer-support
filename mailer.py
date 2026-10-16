@@ -1,6 +1,6 @@
 """Email sending. Real SMTP when SMTP_HOST is set; otherwise nothing is sent (OTP login is disabled
 unless ALLOW_DEV_OTP=1, which writes mails to outbox.log and shows the code on screen: development only)."""
-import html, os, smtplib, ssl, threading, time
+import html, json, os, smtplib, ssl, threading, time, urllib.error, urllib.request
 from email.message import EmailMessage
 
 if os.path.exists(".env"):  # KEY=value lines; keeps secrets out of the shell and chat
@@ -15,13 +15,32 @@ PORT = int(os.getenv("SMTP_PORT", "587"))
 SECURITY = os.getenv("SMTP_SECURITY", "ssl" if PORT == 465 else "starttls").lower()  # starttls | ssl | none
 FROM = os.getenv("SMTP_FROM", USER or "support@technest.local")
 PUBLIC_URL = os.getenv("PUBLIC_URL", "http://127.0.0.1:8000")
-CONFIGURED = bool(HOST)
+BREVO_KEY = os.getenv("BREVO_API_KEY")  # HTTPS email API: works on hosts that block SMTP ports (e.g. Render free)
+BREVO_URL = os.getenv("BREVO_API_URL", "https://api.brevo.com/v3/smtp/email")
+BREVO_SENDER = os.getenv("BREVO_SENDER") or FROM
+CONFIGURED = bool(HOST or BREVO_KEY)
+PROVIDER = "brevo-api" if BREVO_KEY else ("smtp" if HOST else None)
 ALLOW_DEV_OTP = os.getenv("ALLOW_DEV_OTP") == "1" and not CONFIGURED
 DEV = not CONFIGURED
 
 
 class Refused(Exception):
     """The mail server rejected the recipient address."""
+
+
+def _brevo(to, subject, text, body_html):
+    req = urllib.request.Request(
+        BREVO_URL, method="POST",
+        data=json.dumps({"sender": {"name": "TechNest Support", "email": BREVO_SENDER}, "to": [{"email": to}],
+                         "subject": subject, "htmlContent": body_html, "textContent": text}).encode(),
+        headers={"api-key": BREVO_KEY, "Content-Type": "application/json", "Accept": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=20).read()
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf8", "replace")[:300]
+        if e.code == 400 and "email" in detail.lower():  # malformed / rejected recipient
+            raise Refused(detail)
+        raise RuntimeError(f"Brevo HTTP {e.code}: {detail}")
 
 
 def _log(line):
@@ -34,6 +53,17 @@ def deliver(to, subject, text, body_html):
     if not CONFIGURED:
         _log(f"NOT SENT (SMTP not configured) TO={to} SUBJECT={subject}\n{text}\n{'-' * 60}")
         return
+    if PROVIDER == "brevo-api":
+        try:
+            _brevo(to, subject, text, body_html)
+            _log(f"SENT(brevo) TO={to} SUBJECT={subject}")
+            return
+        except Refused as e:
+            _log(f"REFUSED(brevo) TO={to} SUBJECT={subject} ERROR={e}")
+            raise
+        except Exception as e:
+            _log(f"FAILED(brevo) TO={to} SUBJECT={subject} ERROR={e}")
+            raise
     m = EmailMessage()
     m["From"], m["To"], m["Subject"] = f"TechNest Support <{FROM}>", to, subject
     m.set_content(text)

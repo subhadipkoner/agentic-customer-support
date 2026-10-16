@@ -1,0 +1,22 @@
+# Render Blueprint: one-click deploy of the web service.
+# Dashboard -> New -> Blueprint -> pick this repo. Then fill the three "sync: false" values when asked.
+services:
+  - type: web
+    name: technest-support
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/config
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: STAFF_PIN          # random PIN protects the staff dashboard; read it in Render -> Environment
+        generateValue: true
+      - key: BREVO_API_KEY      # Brevo -> SMTP & API -> API keys (v3 key)
+        sync: false
+      - key: BREVO_SENDER       # a sender address you verified in Brevo
+        sync: false
+      - key: PUBLIC_URL         # your final https://<name>.onrender.com address
+        sync: false

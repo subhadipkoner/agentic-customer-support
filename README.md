@@ -29,7 +29,7 @@ offer -> if rejected, timed out or beyond authority, escalate with full history 
 
 ## Tech stack
 
-Python, FastAPI, vanilla JavaScript, SMTP, dnspython. Optional: Anthropic Claude for richer complaint understanding
+Python, FastAPI, vanilla JavaScript, SMTP / Brevo email API, dnspython. Optional: Anthropic Claude for richer complaint understanding
 and message wording (the system works without it using built-in heuristics).
 
 ## Run it
@@ -42,6 +42,17 @@ python -m uvicorn app:app --port 8000
 
 Open http://127.0.0.1:8000. Without SMTP settings, verification codes cannot be emailed. For local UI preview only, set
 `ALLOW_DEV_OTP=1` in `.env`. To protect the staff dashboard, set `STAFF_PIN` in `.env`.
+
+## Deploy (Render, free)
+
+1. Create a free [Brevo](https://www.brevo.com) account, verify a sender address and create an API key (SMTP & API -> API keys).
+   Render's free tier blocks SMTP ports, so the app uses Brevo's HTTPS API there.
+2. On [Render](https://render.com): New -> Blueprint -> select this repo. `render.yaml` configures everything.
+3. When asked, enter `BREVO_API_KEY`, `BREVO_SENDER` and `PUBLIC_URL` (your `https://<name>.onrender.com` address).
+4. The staff dashboard PIN is generated automatically: Render -> your service -> Environment -> `STAFF_PIN`.
+
+Notes: the free tier sleeps after ~15 minutes idle (first load takes ~1 minute) and its disk is ephemeral, so case data
+resets on restart. Abuse protection: per-IP and global rate limits on OTP and case creation.
 
 ## Project layout
 
