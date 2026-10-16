@@ -12,7 +12,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.10
-      - key: STAFF_PIN          # random PIN protects the staff dashboard; read it in Render -> Environment
+      - key: DASHBOARD_OPEN     # "1" = public demo: dashboard open to everyone, customer emails masked
+        value: "1"              # remove this line to protect the dashboard with STAFF_PIN instead
+      - key: STAFF_PIN          # random PIN (used only when DASHBOARD_OPEN is not "1"); see Render -> Environment
         generateValue: true
       - key: BREVO_API_KEY      # Brevo -> SMTP & API -> API keys (v3 key)
         sync: false
