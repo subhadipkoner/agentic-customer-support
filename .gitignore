@@ -1,0 +1,6 @@
+# secrets and local data: never publish these
+.env
+cases.json
+outbox.log
+__pycache__/
+*.pyc
