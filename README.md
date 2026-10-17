@@ -31,7 +31,7 @@ offer -> if rejected, timed out or beyond authority, escalate with full history 
 
 ## Tech stack
 
-Python, FastAPI, vanilla JavaScript, SMTP / Brevo email API, dnspython. Optional: Anthropic Claude for richer complaint understanding
+Python, FastAPI, vanilla JavaScript, PostgreSQL (Neon), SMTP / Brevo email API, dnspython, deployed on Render. Optional: Anthropic Claude for richer complaint understanding
 and message wording (the system works without it using built-in heuristics).
 
 ## Run it
@@ -51,17 +51,23 @@ Open http://127.0.0.1:8000. Without SMTP settings, verification codes cannot be 
    Render's free tier blocks SMTP ports, so the app uses Brevo's HTTPS API there.
 2. On [Render](https://render.com): New -> Blueprint -> select this repo. `render.yaml` configures everything.
 3. When asked, enter `BREVO_API_KEY`, `BREVO_SENDER` and `PUBLIC_URL` (your `https://<name>.onrender.com` address).
-4. The staff dashboard PIN is generated automatically: Render -> your service -> Environment -> `STAFF_PIN`.
+4. **Persistent data (recommended):** Render's free disk is ephemeral, so create a free [Neon](https://neon.tech) Postgres
+   database and add its connection string as the `DATABASE_URL` environment variable. Cases are then stored in Postgres
+   and survive restarts and deploys. Without `DATABASE_URL` the app falls back to a local JSON file.
+5. **Staff dashboard:** `render.yaml` sets `DASHBOARD_OPEN=1` (public demo: open dashboard, customer emails masked).
+   Remove that variable and set `STAFF_PIN` to protect the dashboard with a PIN instead.
 
-Notes: the free tier sleeps after ~15 minutes idle (first load takes ~1 minute) and its disk is ephemeral, so case data
-resets on restart. Abuse protection: per-IP and global rate limits on OTP and case creation.
+Notes: the free tier sleeps after ~15 minutes idle (first load takes ~1 minute). Pushing to GitHub does not auto-deploy
+on this setup, so use Render -> Manual Deploy (and Blueprint -> Manual sync for new environment variables).
+Abuse protection: per-IP and global rate limits on OTP and case creation.
 
 ## Project layout
 
 ```
 agent.py      escalation agent: analysis, policy engine, offers, negotiation
 app.py        FastAPI server: auth, OTP, cases, notifications, stats
-mailer.py     SMTP sending
+store.py      case storage: PostgreSQL (DATABASE_URL) or JSON file
+mailer.py     email sending: SMTP or Brevo HTTPS API
 emailcheck.py email address screening
 static/       single-page UI (customer panel + staff dashboard)
 ```
