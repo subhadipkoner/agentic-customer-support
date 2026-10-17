@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0}
+body{width:1200px;height:627px;overflow:hidden;font-family:"Segoe UI",Inter,Arial,sans-serif;color:#fff;
+background:radial-gradient(900px 500px at 8% 0%,#6d5df5 0%,transparent 60%),radial-gradient(700px 500px at 100% 100%,#a855f7 0%,transparent 60%),linear-gradient(135deg,#1b1a4b,#2b1f6e 55%,#3b1d7a)}
+.wrap{display:flex;height:100%;padding:56px 64px;gap:44px;align-items:center}
+.left{flex:1.05}
+.badge{display:inline-flex;align-items:center;gap:10px;padding:8px 18px;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);font-size:18px;font-weight:600}
+.badge i{width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 0 5px rgba(52,211,153,.25)}
+h1{font-size:60px;line-height:1.08;margin:22px 0 16px;letter-spacing:-.02em;font-weight:800}
+h1 span{background:linear-gradient(90deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}
+p{font-size:25px;line-height:1.4;color:#d9d6ff;max-width:520px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.chips b{font-size:18px;font-weight:600;padding:8px 16px;border-radius:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}
+.right{flex:.95}
+.card{background:#fff;color:#161a2b;border-radius:24px;padding:26px 28px;box-shadow:0 30px 70px rgba(10,6,50,.55)}
+.top{display:flex;justify-content:space-between;align-items:center}
+.top b{font-size:21px}.pill{font-size:15px;font-weight:700;padding:5px 14px;border-radius:99px;background:#eef0ff;color:#4f46e5}
+.steps{display:flex;align-items:center;margin:20px 0 6px}
+.st{display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;font-size:15px;color:#667085;font-weight:600}
+.dot{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:17px;background:#f4f5fb;border:3px solid #e5e7f0;color:#667085}
+.done .dot{background:#16a34a;border-color:#16a34a;color:#fff}
+.act .dot{border-color:#4f46e5;color:#4f46e5;box-shadow:0 0 0 7px rgba(79,70,229,.15)}
+.act{color:#161a2b}
+.bar{flex:1;height:5px;border-radius:5px;background:#e5e7f0;margin-bottom:24px}.bar.on{background:#16a34a}
+.msg{display:flex;gap:12px;margin-top:14px;align-items:flex-start}
+.av{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px}
+.b{background:#f4f5fb;border:1px solid #e5e7f0;border-radius:16px 16px 16px 4px;padding:11px 15px;font-size:17px;line-height:1.4}
+.b small{display:block;font-weight:700;color:#667085;font-size:13px;margin-bottom:2px}
+.me{flex-direction:row-reverse}.me .b{background:#eef0ff;border-color:transparent;border-radius:16px 16px 4px 16px}
+.ok{margin-top:16px;background:#e8f7ee;color:#16a34a;border-radius:14px;padding:12px;text-align:center;font-weight:800;font-size:18px}
+</style></head><body><div class="wrap">
+<div class="left">
+ <div class="badge"><i></i>Live &middot; Agentic AI</div>
+ <h1>AI Customer Support <span>Escalation Agent</span></h1>
+ <p>Routes every complaint to the right person and escalates until the customer is satisfied.</p>
+ <div class="chips"><b>Python</b><b>FastAPI</b><b>JavaScript</b><b>Email OTP</b></div>
+</div>
+<div class="right"><div class="card">
+ <div class="top"><b>Laptop &middot; Case #75501594</b><span class="pill">Resolved</span></div>
+ <div class="steps">
+  <div class="st done"><div class="dot">&#10003;</div>Rahul</div><div class="bar on"></div>
+  <div class="st done"><div class="dot">&#10003;</div>Priya</div><div class="bar on"></div>
+  <div class="st done"><div class="dot">&#10003;</div>Vikram</div>
+ </div>
+ <div class="msg"><div class="av" style="background:#0ea5e9">RS</div><div class="b"><small>Rahul Sharma &middot; L1</small>I can offer a free repair.</div></div>
+ <div class="msg me"><div class="av" style="background:#16a34a">A</div><div class="b"><small>You</small>No, I want my money back.</div></div>
+ <div class="msg"><div class="av" style="background:#a855f7">VM</div><div class="b"><small>Vikram Mehta &middot; L3</small>Full refund of Rs 58,000 approved.</div></div>
+ <div class="ok">&#127881; Issue resolved</div>
+</div></div>
+</div></body></html>

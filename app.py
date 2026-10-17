@@ -2,20 +2,20 @@ import asyncio, hashlib, hmac, html, json, os, re, secrets, threading, time
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import mailer, agent, emailcheck  # mailer first: it loads .env
+import mailer, agent, emailcheck, store  # mailer first: it loads .env
 
-DB = os.getenv("DB_PATH", "cases.json")
-STAFF_PIN = os.getenv("STAFF_PIN", "")  # empty = dashboard is open (set a PIN in .env to protect it)
+OPEN_DASH = os.getenv("DASHBOARD_OPEN") == "1"  # public demo: dashboard open to everyone, customer emails masked
+STAFF_PIN = "" if OPEN_DASH else os.getenv("STAFF_PIN", "")  # empty = dashboard is open
 OTP_TTL, SESSION_TTL, RESEND_GAP, MAX_TRIES, MAX_PER_HOUR = 600, 86400, 30, 5, 5
 EMAIL_RX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 lock = threading.Lock()
-cases = json.load(open(DB)) if os.path.exists(DB) else {}
+cases = store.load()
 otps, sessions = {}, {}  # email -> otp state, token -> {email, exp}
 app = FastAPI(title="TechNest Autonomous Support Agent")
 
 
 def save():
-    json.dump(cases, open(DB, "w"), indent=1)
+    store.save(cases)
 
 
 # ---------- abuse protection: per-IP and global rate limits ----------
@@ -67,6 +67,12 @@ def config():
 def need_staff(staff):
     if STAFF_PIN and not (staff and hmac.compare_digest(staff, STAFF_PIN)):
         raise HTTPException(401, "Invalid staff PIN.")
+
+
+def mask(c):
+    """Copy of a case with the email masked (used when the dashboard is open without a PIN)."""
+    local, _, dom = (c.get("email") or "").partition("@")
+    return {**c, "email": f"{local[:1]}***@{dom}" if dom else ""}
 
 
 def get(i):
@@ -223,15 +229,18 @@ def my_cases(x_token: str = Header(None)):
 @app.get("/api/cases")
 def all_cases(x_staff: str = Header(None)):
     need_staff(x_staff)
-    return sorted(cases.values(), key=lambda c: -c["created"])
+    out = sorted(cases.values(), key=lambda c: -c["created"])
+    return out if STAFF_PIN else [mask(c) for c in out]
 
 
 @app.get("/api/cases/{i}")
 def one(i: str, x_token: str = Header(None), x_staff: str = Header(None)):
     email, is_staff = who(x_token, x_staff)
     c = get(i)
-    if is_staff or (email and c.get("email") == email):
+    if email and c.get("email") == email:
         return c
+    if is_staff:
+        return c if STAFF_PIN else mask(c)
     raise HTTPException(401 if not email else 403, "You are not allowed to view this case.")
 
 
@@ -308,7 +317,8 @@ async def _start():
     print("[mail] " + (f"{mailer.PROVIDER} ready: real emails enabled" if mailer.CONFIGURED else
           "DEV OTP (ALLOW_DEV_OTP=1): codes shown on screen, NOT emailed" if mailer.ALLOW_DEV_OTP else
           "SMTP NOT configured: verification codes cannot be sent. See .env.example"))
-    print("[staff] dashboard " + ("protected by STAFF_PIN" if STAFF_PIN else "is OPEN (no PIN)"))
+    print("[staff] dashboard " + ("protected by STAFF_PIN" if STAFF_PIN else "is OPEN (emails masked)" if OPEN_DASH else "is OPEN (no PIN)"))
+    print(f"[store] {store.backend()}: {len(cases)} case(s) loaded")
 
 
 @app.get("/")
